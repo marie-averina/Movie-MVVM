@@ -8,7 +8,9 @@
 import UIKit
 import Alamofire
 
-class DetailsViewController: UIViewController {
+final class DetailsViewController: UIViewController {
+    
+    //MARK: - @IBOutlet
     
     @IBOutlet weak var posterImageView: UIImageView!
     @IBOutlet weak var releaseDateLabel: UILabel!
@@ -17,47 +19,63 @@ class DetailsViewController: UIViewController {
     @IBOutlet weak var overviewLabel: UILabel!
     
     //MARK: - Public properties
-    public var movieId: String?
+    
+    public let movieId: String!
     
     //MARK: - Private properties
-    private var viewModel: DetailsViewModel!
     
-    // MARK: AboutMovieViewController Lifecycle
+    private let viewModel: DetailsViewModel!
+    
+    //MARK: - Initialization
+    
+    init?(coder: NSCoder, viewModel: DetailsViewModel, id: String) {
+        self.viewModel = viewModel
+        self.movieId = id
+        super.init(coder: coder)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("Use `init(coder:image:)` to initialize an `ImageViewController` instance.")
+    }
+    
+    // MARK: DetailsViewController Lifecycle
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.viewModel = DetailsViewModel()
-        callAPI()
+        initViewModel()
     }
     
     //MARK: - Private methods
-    private func callAPI() {
-        guard let id = movieId else { return }
-        
-        self.view.activityStartAnimating(activityColor: .red, backgroundColor: .black.withAlphaComponent(0.5))
-        viewModel.initFetchProcess(id: id) { movie in }
-        
-        viewModel.movieDetailModel.bind { [weak self] _ in
+    
+    private func initViewModel() {
+        viewModel.updateLoadingStatus = { [weak self] () in
             DispatchQueue.main.async {
-                self?.setUpData()
+                let isLoading = self?.viewModel.isLoading ?? false
+                if isLoading {
+                    self?.view.activityStartAnimating(activityColor: .red, backgroundColor: .white.withAlphaComponent(1))
+                } else {
+                    self?.view.activityStopAnimating()
+                }
             }
         }
         
-        viewModel.isToShowLoader.bind { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.view.activityStopAnimating()
-            }
+        viewModel.reloadData = { [weak self] viewData in
+            self?.setupData(movie: viewData)
         }
+        
+        viewModel.initFetchProcess(id: movieId)
     }
-
-    private func setUpData() {
-        guard let movie = viewModel.movieDetailModel.value,
-        let posterData = movie.posterImageData,
-        let voteAverage = movie.voteAverage else { return }
+   
+    private func setupData(movie: MovieDetailsModel) {
+        guard let rate = movie.voteAverage,
+              let imageData = movie.posterImageData else { return }
         self.navigationController?.navigationBar.topItem?.title = movie.title
         releaseDateLabel.text = movie.releaseDate
-        rateLabel.text = String(voteAverage)
+        rateLabel.text = String(rate)
         languageLabel.text = movie.originalLanguage
         overviewLabel.text = movie.overview
-        posterImageView.load(data: posterData)
+        posterImageView.load(data: imageData)
     }
+    
+   
 }

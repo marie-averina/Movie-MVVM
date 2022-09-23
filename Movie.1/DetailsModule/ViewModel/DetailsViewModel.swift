@@ -10,30 +10,39 @@ import Foundation
 final class DetailsViewModel {
     
     //MARK: - Public properties
-    public let movieDetailModel: Observable<MovieDetailsModel?> = Observable(nil)
-    public var isToShowLoader: Observable<Bool> = Observable(false)
+    
+    public var reloadData: ((MovieDetailsModel)->())?
+    public var updateLoadingStatus: (()->())?
+    public var isLoading: Bool = false {
+        didSet {
+            self.updateLoadingStatus?()
+        }
+    }
     
     //MARK: - Private properties
+    
     private let apiManager: APIManagerProtocol!
+    private var movieDetails: MovieDetailsModel? = nil
     
     //MARK: - Initialization
+    
     init(apiManager: APIManagerProtocol = APIManager()) {
         self.apiManager = apiManager
     }
     
     //MARK: - Public methods
-    public func initFetchProcess(id: String, complettion: @escaping (Observable<MovieDetailsModel?>)->()) {
+    
+    public func initFetchProcess(id: String) {
         
-        self.isToShowLoader.value = true
+        isLoading = true
         
         self.apiManager.getFilmById(id: id) { [weak self] movie in
-            self?.isToShowLoader.value = false
-            guard let self = self else { return }
+            self?.isLoading = false
             DispatchQueue.main.async {
-                self.movieDetailModel.value = movie
+                self?.reloadData?(movie)
             }
         }
-        complettion(self.movieDetailModel)
     }
-    
 }
+
+

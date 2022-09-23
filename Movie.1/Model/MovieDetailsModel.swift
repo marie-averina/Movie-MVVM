@@ -24,11 +24,7 @@ struct MovieDetailsModel: Decodable {
     var video: Bool?
     var voteAverage: Double?
     var voteCount: Int?
-    var poster: String? {
-        get{
-            return "https://image.tmdb.org/t/p/w500/\(posterPath)"
-        }
-    }
+    var poster: String? 
     var posterImageData: Data?
 
     enum CodingKeys: String, CodingKey {
