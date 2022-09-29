@@ -6,13 +6,14 @@
 //
 
 import Foundation
-
+import Alamofire
 final class DetailsViewModel {
     
     //MARK: - Public properties
     
     public var reloadData: ((MovieDetailsModel)->())?
     public var updateLoadingStatus: (()->())?
+    public var onErrorHandling : ((String) -> Void)?
     public var isLoading: Bool = false {
         didSet {
             self.updateLoadingStatus?()
@@ -22,7 +23,6 @@ final class DetailsViewModel {
     //MARK: - Private properties
     
     private let apiManager: APIManagerProtocol!
-    private var movieDetails: MovieDetailsModel? = nil
     
     //MARK: - Initialization
     
@@ -36,11 +36,20 @@ final class DetailsViewModel {
         
         isLoading = true
         
-        self.apiManager.getFilmById(id: id) { [weak self] movie in
-            self?.isLoading = false
-            DispatchQueue.main.async {
-                self?.reloadData?(movie)
+        do {
+            try self.apiManager.getFilmById(id: id) { [weak self] movie in
+                self?.isLoading = false
+                DispatchQueue.main.async {
+                    self?.reloadData?(movie)
+                }
             }
+            
+        } catch RequestErrors.invalidURLError {
+            onErrorHandling?("Invalid url")
+        } catch RequestErrors.URLRequestFailed {
+            onErrorHandling?("Url request failed")
+        } catch {
+            onErrorHandling?("Unnknowned error")
         }
     }
 }

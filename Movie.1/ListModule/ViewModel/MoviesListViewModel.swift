@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Alamofire
 
 
 final class MoviesListViewModel {
@@ -19,18 +20,19 @@ final class MoviesListViewModel {
     }
     
     public var numberOfCells: Int {
-        return cellViewModels.count
+        return cellModels.count
     }
     
     public var selectedMovie: Result?
     public var reloadTableViewClosure: (()->())?
     public var updateLoadingStatus: (()->())?
+    public var onErrorHandling : ((String) -> Void)?
     
     //MARK: - Private properties
     
-    private let apiManager: APIManagerProtocol!
+    private let apiManager: APIManagerProtocol
     private var movies = [Result]()
-    private var cellViewModels = [MovieCellViewModel]() {
+    private var cellModels = [MovieCellModel]() {
         didSet {
             self.reloadTableViewClosure?()
         }
@@ -45,34 +47,50 @@ final class MoviesListViewModel {
     //MARK: - Public methods
     
     public func fetchMovieList() {
-        
+      
         isLoading = true
         
-        self.apiManager.getFilms(page: 1) { [weak self] movies in
-            self?.isLoading = false
-            self?.processFetchedMovies(movies: movies)
+        do {
+            try self.apiManager.getFilms(page: 1) { [weak self] movies in
+                self?.isLoading = false
+                self?.processFetchedMovies(movies: movies)
+            }
+        } catch RequestErrors.invalidURLError {
+            onErrorHandling?("Invalid url")
+        } catch RequestErrors.URLRequestFailed {
+            onErrorHandling?("Url request failed")
+        } catch {
+            onErrorHandling?("Unnknowned error")
         }
     }
     
-    public func getCellViewModel(at indexPath: IndexPath) -> MovieCellViewModel {
-        return cellViewModels[indexPath.row]
+    public func getCellViewModel(at indexPath: IndexPath) -> MovieCellModel {
+        return cellModels[indexPath.row]
     }
     
     //MARK: - Private methods
     
     private func processFetchedMovies(movies: [Result]) {
         self.movies = movies
-        var cellViewModels = [MovieCellViewModel]()
+        var cellModels = [MovieCellModel]()
         for movie in movies {
-            cellViewModels.append(createCellViewModel(movie: movie))
+            do {
+                try cellModels.append(createCellViewModel(movie: movie))
+            } catch RequestErrors.URLRequestFailed {
+                onErrorHandling?("URL request failed")
+            } catch {
+                onErrorHandling?("Unknown error")
+            }
         }
-        self.cellViewModels = cellViewModels
+        self.cellModels = cellModels
     }
     
-    private func createCellViewModel(movie: Result) -> MovieCellViewModel {
+    private func createCellViewModel(movie: Result) throws -> MovieCellModel {
      
-        guard let data = movie.posterImageData else { fatalError() }
-        return MovieCellViewModel(titleText: movie.title,
+        guard let data = movie.posterImageData else {
+            throw RequestErrors.URLRequestFailed
+        }
+        return MovieCellModel(titleText: movie.title,
                                   rateText: String(movie.voteAverage),
                                   yearText: movie.releaseDate,
                                   imageData: data)

@@ -20,11 +20,11 @@ final class DetailsViewController: UIViewController {
     
     //MARK: - Public properties
     
-    public let movieId: String!
+    public let movieId: String
     
     //MARK: - Private properties
     
-    private let viewModel: DetailsViewModel!
+    private let viewModel: DetailsViewModel
     
     //MARK: - Initialization
     
@@ -48,7 +48,7 @@ final class DetailsViewController: UIViewController {
     //MARK: - Private methods
     
     private func initViewModel() {
-        viewModel.updateLoadingStatus = { [weak self] () in
+        viewModel.updateLoadingStatus = { [weak self] in
             DispatchQueue.main.async {
                 let isLoading = self?.viewModel.isLoading ?? false
                 if isLoading {
@@ -63,12 +63,19 @@ final class DetailsViewController: UIViewController {
             self?.setupData(movie: viewData)
         }
         
+        viewModel.onErrorHandling = { errorText in
+            self.showAlert(title: "Error", message: errorText)
+        }
+        
         viewModel.initFetchProcess(id: movieId)
     }
    
     private func setupData(movie: MovieDetailsModel) {
         guard let rate = movie.voteAverage,
-              let imageData = movie.posterImageData else { return }
+              let imageData = movie.posterImageData else {
+            self.showAlert(title: "Error", message: "Movie details failed to load")
+            return
+        }
         self.navigationController?.navigationBar.topItem?.title = movie.title
         releaseDateLabel.text = movie.releaseDate
         rateLabel.text = String(rate)

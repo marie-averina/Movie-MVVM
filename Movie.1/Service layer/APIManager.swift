@@ -10,8 +10,8 @@ import Alamofire
 
 //MARK: - APIManagerProtocol
 protocol APIManagerProtocol {
-    func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void)
-    func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void)
+    func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void) throws
+    func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) throws
 }
 
 //MARK: - APIManager
@@ -24,43 +24,67 @@ final class APIManager: APIManagerProtocol {
     
     //MARK: - Public methods
     
-    public func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void) {
+    public func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void) throws {
         
         let moviesListURL = baseURL + "3/movie/" + "upcoming" + "?api_key=\(apiKey)"
         let urlString = moviesListURL + "&page=\(page)"
-        guard let url = URL(string: urlString) else { return }
+        guard let url = URL(string: urlString) else {
+           throw RequestErrors.invalidURLError
+        }
         
-        APICaller.shared.performAPICall(url: url, expectingReturnType: MovieResponse.self) { [weak self] moviesList in
-            var movies = [Result]()
-            for i in 0...moviesList.results.count - 1 {
-                var movie = moviesList.results[i]
-                guard let url = self?.getURL(posterPath: movie.posterPath) else { return }
-                movie.posterImageData = try? Data(contentsOf: url)
-                movies.append(movie)
+        var requestDidFail = false
+        AF.request(url).responseDecodable { [weak self] (response: AFDataResponse<MovieResponse>) in
+            switch response.result {
+            case .success(let moviesList):
+                var movies = [Result]()
+                for i in 0...moviesList.results.count - 1 {
+                    var movie = moviesList.results[i]
+                    guard let url = self?.getURL(posterPath: movie.posterPath) else { return }
+                    movie.posterImageData = try? Data(contentsOf: url)
+                    movies.append(movie)
+                }
+                completionHandler(movies)
+            case .failure(_):
+                requestDidFail = true
             }
-            completionHandler(movies)
+        }
+        
+        if requestDidFail {
+            throw RequestErrors.URLRequestFailed
         }
     }
     
-    public func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) {
+    public func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) throws {
         
         let movieDetailURL = baseURL + "3/movie/"
         let finalURL = movieDetailURL + id + "?api_key=\(apiKey)"
-        guard let movieDetailURL = URL(string: finalURL)  else { return }
+        guard let movieDetailURL = URL(string: finalURL)  else {
+            throw RequestErrors.invalidURLError
+        }
+        var requestDidFail = false
         
-        APICaller.shared.performAPICall(url: movieDetailURL, expectingReturnType: MovieDetailsModel.self) { [weak self] movie in
-            var modifiedMovie = movie
-            guard let url = self?.getURL(posterPath: movie.posterPath) else { return }
-            modifiedMovie.posterImageData = try? Data(contentsOf: url)
-            completionHandler(modifiedMovie)
+        AF.request(movieDetailURL).responseDecodable { [weak self] (response: AFDataResponse<MovieDetailsModel>) in
+            switch response.result {
+            case .failure(_):
+                requestDidFail = true
+            case .success(let movie):
+                var modifiedMovie = movie
+                guard let url = self?.getURL(posterPath: movie.posterPath) else { return }
+                modifiedMovie.posterImageData = try? Data(contentsOf: url)
+                completionHandler(modifiedMovie)
+            }
+        }
+        
+        if requestDidFail {
+            throw RequestErrors.URLRequestFailed
         }
     }
     
     //MARK: - Private methods
     
-    private func getURL(posterPath: String) -> URL {
+    private func getURL(posterPath: String) -> URL? {
         let urlString = "https://image.tmdb.org/t/p/w500/\(posterPath)"
-        guard let url = URL(string: urlString) else { fatalError() }
+        let url = URL(string: urlString)
         return url
     }
 }
