@@ -18,7 +18,6 @@ final class MoviesListViewModel {
             self.updateLoadingStatus?()
         }
     }
-    
     public var numberOfCells: Int {
         return cellModels.count
     }
@@ -51,7 +50,7 @@ final class MoviesListViewModel {
         isLoading = true
         
         do {
-            try self.apiManager.getFilms(page: 1) { [weak self] movies in
+            try self.apiManager.getFilms() { [weak self] movies in
                 self?.isLoading = false
                 self?.processFetchedMovies(movies: movies)
             }
@@ -68,6 +67,21 @@ final class MoviesListViewModel {
         return cellModels[indexPath.row]
     }
     
+    private func getImageData(posterPath: String) -> Data {
+        let futureImageData = ImageData(posterPath: posterPath)
+        var imageData = Data()
+        do {
+         try futureImageData.loadImage() { data in
+                imageData = data
+            }
+        } catch let error as RequestErrors {
+            onErrorHandling?(error.rawValue)
+        } catch {
+            onErrorHandling?("Unknown error")
+        }
+        return imageData
+    }
+    
     //MARK: - Private methods
     
     private func processFetchedMovies(movies: [Result]) {
@@ -76,8 +90,8 @@ final class MoviesListViewModel {
         for movie in movies {
             do {
                 try cellModels.append(createCellViewModel(movie: movie))
-            } catch RequestErrors.URLRequestFailed {
-                onErrorHandling?("URL request failed")
+            } catch let error as RequestErrors {
+                onErrorHandling?(error.rawValue)
             } catch {
                 onErrorHandling?("Unknown error")
             }
@@ -87,13 +101,11 @@ final class MoviesListViewModel {
     
     private func createCellViewModel(movie: Result) throws -> MovieCellModel {
      
-        guard let data = movie.posterImageData else {
-            throw RequestErrors.URLRequestFailed
-        }
+        let imageData = getImageData(posterPath: movie.posterPath)
         return MovieCellModel(titleText: movie.title,
                                   rateText: String(movie.voteAverage),
                                   yearText: movie.releaseDate,
-                                  imageData: data)
+                                  imageData: imageData)
     }
 }
 

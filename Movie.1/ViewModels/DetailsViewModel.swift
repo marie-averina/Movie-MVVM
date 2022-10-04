@@ -7,16 +7,24 @@
 
 import Foundation
 import Alamofire
+
 final class DetailsViewModel {
     
     //MARK: - Public properties
     
     public var reloadData: ((MovieDetailsModel)->())?
+    public var reloadImageData: ((Data)->())?
     public var updateLoadingStatus: (()->())?
+    public var updateImageLoadingStatus: (()->())?
     public var onErrorHandling : ((String) -> Void)?
     public var isLoading: Bool = false {
         didSet {
             self.updateLoadingStatus?()
+        }
+    }
+    public var imageIsLoading: Bool = false {
+        didSet {
+            self.updateImageLoadingStatus?()
         }
     }
     
@@ -44,14 +52,32 @@ final class DetailsViewModel {
                 }
             }
             
-        } catch RequestErrors.invalidURLError {
-            onErrorHandling?("Invalid url")
-        } catch RequestErrors.URLRequestFailed {
-            onErrorHandling?("Url request failed")
+        } catch let error as RequestErrors {
+            onErrorHandling?(error.rawValue)
         } catch {
-            onErrorHandling?("Unnknowned error")
+            onErrorHandling?("Unknown error")
         }
     }
+    
+    public func loadImage(posterPath: String) {
+        
+        let futureImageData = ImageData(posterPath: posterPath)
+        imageIsLoading = true
+        
+        do {
+            try futureImageData.loadImage { [weak self] imageData in
+                self?.imageIsLoading = false
+                DispatchQueue.main.async {
+                    self?.reloadImageData?(imageData)
+                }
+            }
+        } catch let error as RequestErrors {
+            onErrorHandling?(error.rawValue)
+        } catch {
+            onErrorHandling?("Unknown error")
+        }
+    }
+
 }
 
 

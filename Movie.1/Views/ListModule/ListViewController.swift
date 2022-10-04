@@ -83,17 +83,10 @@ extension ListViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         viewModel.userPressed(at: indexPath)
         let movie = viewModel.selectedMovie
-        guard let movieId = movie?.id else {
-            self.showAlert(title: "Error", message: "Movie details failed to load")
-            return
-        }
+        guard let movieId = movie?.id else { return }
         let detailsViewModel = DetailsViewModel()
-        if let detailsViewController = self.storyboard?.instantiateViewController(identifier: "DetailsViewController", creator: { coder -> DetailsViewController? in
-            DetailsViewController(coder: coder, viewModel: detailsViewModel, id: String(movieId))
-        }) {
-            detailsViewController.modalPresentationStyle = .fullScreen
-            navigationController?.pushViewController(detailsViewController, animated: true)
-        }
+        let detailsViewController = DetailsViewController(viewModel: detailsViewModel, movieId: String(movieId))
+        navigationController?.pushViewController(detailsViewController, animated: true)
         
     }
     

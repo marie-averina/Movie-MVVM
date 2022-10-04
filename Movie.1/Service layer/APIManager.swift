@@ -10,7 +10,7 @@ import Alamofire
 
 //MARK: - APIManagerProtocol
 protocol APIManagerProtocol {
-    func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void) throws
+    func getFilms(completionHandler: @escaping ([Result]) -> Void) throws
     func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) throws
 }
 
@@ -24,26 +24,18 @@ final class APIManager: APIManagerProtocol {
     
     //MARK: - Public methods
     
-    public func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void) throws {
+    public func getFilms(completionHandler: @escaping ([Result]) -> Void) throws {
         
         let moviesListURL = baseURL + "3/movie/" + "upcoming" + "?api_key=\(apiKey)"
-        let urlString = moviesListURL + "&page=\(page)"
-        guard let url = URL(string: urlString) else {
+        guard let url = URL(string: moviesListURL) else {
            throw RequestErrors.invalidURLError
         }
         
         var requestDidFail = false
-        AF.request(url).responseDecodable { [weak self] (response: AFDataResponse<MovieResponse>) in
+        AF.request(url).responseDecodable { (response: AFDataResponse<MovieResponse>) in
             switch response.result {
             case .success(let moviesList):
-                var movies = [Result]()
-                for i in 0...moviesList.results.count - 1 {
-                    var movie = moviesList.results[i]
-                    guard let url = self?.getURL(posterPath: movie.posterPath) else { return }
-                    movie.posterImageData = try? Data(contentsOf: url)
-                    movies.append(movie)
-                }
-                completionHandler(movies)
+                completionHandler(moviesList.results)
             case .failure(_):
                 requestDidFail = true
             }
@@ -56,22 +48,19 @@ final class APIManager: APIManagerProtocol {
     
     public func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) throws {
         
-        let movieDetailURL = baseURL + "3/movie/"
-        let finalURL = movieDetailURL + id + "?api_key=\(apiKey)"
-        guard let movieDetailURL = URL(string: finalURL)  else {
+        let movieDetailURL = baseURL + "3/movie/" + id + "?api_key=\(apiKey)"
+
+        guard let movieDetailURL = URL(string: movieDetailURL)  else {
             throw RequestErrors.invalidURLError
         }
         var requestDidFail = false
         
-        AF.request(movieDetailURL).responseDecodable { [weak self] (response: AFDataResponse<MovieDetailsModel>) in
+        AF.request(movieDetailURL).responseDecodable { (response: AFDataResponse<MovieDetailsModel>) in
             switch response.result {
             case .failure(_):
                 requestDidFail = true
             case .success(let movie):
-                var modifiedMovie = movie
-                guard let url = self?.getURL(posterPath: movie.posterPath) else { return }
-                modifiedMovie.posterImageData = try? Data(contentsOf: url)
-                completionHandler(modifiedMovie)
+                completionHandler(movie)
             }
         }
         
@@ -79,12 +68,5 @@ final class APIManager: APIManagerProtocol {
             throw RequestErrors.URLRequestFailed
         }
     }
-    
-    //MARK: - Private methods
-    
-    private func getURL(posterPath: String) -> URL? {
-        let urlString = "https://image.tmdb.org/t/p/w500/\(posterPath)"
-        let url = URL(string: urlString)
-        return url
-    }
+
 }

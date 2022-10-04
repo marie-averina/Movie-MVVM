@@ -20,22 +20,28 @@ final class DetailsViewController: UIViewController {
     
     //MARK: - Public properties
     
-    public let movieId: String
+    public let movieId: String?
     
     //MARK: - Private properties
     
-    private let viewModel: DetailsViewModel
+    private let viewModel: DetailsViewModel?
     
     //MARK: - Initialization
     
-    init?(coder: NSCoder, viewModel: DetailsViewModel, id: String) {
-        self.viewModel = viewModel
-        self.movieId = id
-        super.init(coder: coder)
+    convenience init() {
+        self.init(viewModel: nil, movieId: nil)
     }
-    
-    required init?(coder: NSCoder) {
-        fatalError("Use `init(coder:image:)` to initialize an `ImageViewController` instance.")
+        
+    init(viewModel: DetailsViewModel?, movieId: String?) {
+        self.viewModel = viewModel
+        self.movieId = movieId
+        super.init(nibName: nil, bundle: nil)
+        
+    }
+    required init?(coder aDecoder: NSCoder) {
+        self.movieId = String()
+        self.viewModel = DetailsViewModel()
+        super.init(coder: aDecoder)
     }
     
     // MARK: DetailsViewController Lifecycle
@@ -48,9 +54,11 @@ final class DetailsViewController: UIViewController {
     //MARK: - Private methods
     
     private func initViewModel() {
-        viewModel.updateLoadingStatus = { [weak self] in
+        guard let movieId = movieId else { return }
+        
+        viewModel?.updateLoadingStatus = { [weak self] in
             DispatchQueue.main.async {
-                let isLoading = self?.viewModel.isLoading ?? false
+                let isLoading = self?.viewModel?.isLoading ?? false
                 if isLoading {
                     self?.view.activityStartAnimating(activityColor: .red, backgroundColor: .white.withAlphaComponent(1))
                 } else {
@@ -59,30 +67,41 @@ final class DetailsViewController: UIViewController {
             }
         }
         
-        viewModel.reloadData = { [weak self] viewData in
+        viewModel?.updateImageLoadingStatus = { [weak self] in
+            DispatchQueue.main.async {
+                let isLoading = self?.viewModel?.imageIsLoading ?? false
+                if isLoading {
+                    self?.posterImageView.activityStartAnimating(activityColor: .white, backgroundColor: .red.withAlphaComponent(0.5))
+                } else {
+                    self?.posterImageView.activityStopAnimating()
+                }
+            }
+        }
+        
+        viewModel?.reloadData = { [weak self] viewData in
             self?.setupData(movie: viewData)
         }
         
-        viewModel.onErrorHandling = { errorText in
+        viewModel?.reloadImageData = { [weak self] imageData in
+            self?.posterImageView.load(data: imageData)
+        }
+        
+        viewModel?.onErrorHandling = { errorText in
             self.showAlert(title: "Error", message: errorText)
         }
         
-        viewModel.initFetchProcess(id: movieId)
+        viewModel?.initFetchProcess(id: movieId)
+        
     }
    
     private func setupData(movie: MovieDetailsModel) {
-        guard let rate = movie.voteAverage,
-              let imageData = movie.posterImageData else {
-            self.showAlert(title: "Error", message: "Movie details failed to load")
-            return
-        }
+        guard let rate = movie.voteAverage else {return }
         self.navigationController?.navigationBar.topItem?.title = movie.title
         releaseDateLabel.text = movie.releaseDate
         rateLabel.text = String(rate)
         languageLabel.text = movie.originalLanguage
         overviewLabel.text = movie.overview
-        posterImageView.load(data: imageData)
+        viewModel?.loadImage(posterPath: movie.posterPath)
     }
     
-   
 }
