@@ -54,12 +54,12 @@ final class MoviesListViewModel {
                 self?.isLoading = false
                 self?.processFetchedMovies(movies: movies)
             }
-        } catch RequestErrors.invalidURLError {
-            onErrorHandling?("Invalid url")
-        } catch RequestErrors.URLRequestFailed {
-            onErrorHandling?("Url request failed")
-        } catch {
-            onErrorHandling?("Unnknowned error")
+        } catch let error {
+            if let requestError = error as? RequestErrors {
+                onErrorHandling?(requestError.rawValue)
+            } else {
+                onErrorHandling?("Unknown error")
+            }
         }
     }
     
@@ -74,10 +74,12 @@ final class MoviesListViewModel {
          try futureImageData.loadImage() { data in
                 imageData = data
             }
-        } catch let error as RequestErrors {
-            onErrorHandling?(error.rawValue)
-        } catch {
-            onErrorHandling?("Unknown error")
+        } catch let error {
+            if let requestError = error as? RequestErrors {
+                onErrorHandling?(requestError.rawValue)
+            } else {
+                onErrorHandling?("Unknown error")
+            }
         }
         return imageData
     }
@@ -90,10 +92,12 @@ final class MoviesListViewModel {
         for movie in movies {
             do {
                 try cellModels.append(createCellViewModel(movie: movie))
-            } catch let error as RequestErrors {
-                onErrorHandling?(error.rawValue)
-            } catch {
-                onErrorHandling?("Unknown error")
+            } catch let error {
+                if let requestError = error as? RequestErrors {
+                    onErrorHandling?(requestError.rawValue)
+                } else {
+                    onErrorHandling?("Unknown error")
+                }
             }
         }
         self.cellModels = cellModels

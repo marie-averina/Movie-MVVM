@@ -18,13 +18,10 @@ final class DetailsViewController: UIViewController {
     @IBOutlet weak var languageLabel: UILabel!
     @IBOutlet weak var overviewLabel: UILabel!
     
-    //MARK: - Public properties
-    
-    public let movieId: String?
-    
     //MARK: - Private properties
     
-    private let viewModel: DetailsViewModel?
+    private var viewModel: DetailsViewModel?
+    private var movieId: String?
     
     //MARK: - Initialization
     
@@ -36,11 +33,9 @@ final class DetailsViewController: UIViewController {
         self.viewModel = viewModel
         self.movieId = movieId
         super.init(nibName: nil, bundle: nil)
-        
     }
+   
     required init?(coder aDecoder: NSCoder) {
-        self.movieId = String()
-        self.viewModel = DetailsViewModel()
         super.init(coder: aDecoder)
     }
     
