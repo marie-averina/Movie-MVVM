@@ -52,10 +52,12 @@ final class DetailsViewModel {
                 }
             }
             
-        } catch let error as RequestErrors {
-            onErrorHandling?(error.rawValue)
-        } catch {
-            onErrorHandling?("Unknown error")
+        } catch let error {
+            if let requestError = error as? RequestErrors {
+                onErrorHandling?(requestError.rawValue)
+            } else {
+                onErrorHandling?("Unknown error")
+            }
         }
     }
     
@@ -71,10 +73,12 @@ final class DetailsViewModel {
                     self?.reloadImageData?(imageData)
                 }
             }
-        } catch let error as RequestErrors {
-            onErrorHandling?(error.rawValue)
-        } catch {
-            onErrorHandling?("Unknown error")
+        } catch let error {
+            if let requestError = error as? RequestErrors {
+                onErrorHandling?(requestError.rawValue)
+            } else {
+                onErrorHandling?("Unknown error")
+            }
         }
     }
 
