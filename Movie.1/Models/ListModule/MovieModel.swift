@@ -22,11 +22,13 @@ struct MovieResponse: Decodable {
 }
 
 // MARK: - Dates
+
 struct Movie: Decodable {
     let maximum, minimum: String
 }
 
 // MARK: - Result
+
 struct Result: Decodable { 
     let backdropPath: String?
     let id: Int
@@ -34,11 +36,7 @@ struct Result: Decodable {
     let originalTitle, overview: String
     let popularity: Double
     let posterPath, releaseDate, title: String
-    var poster: String? {
-        get{
-            return "https://image.tmdb.org/t/p/w500/\(posterPath)"
-        }
-    }
+    var poster: String? 
     let video: Bool
     let voteAverage: Double
     let voteCount: Int

@@ -10,41 +10,63 @@ import Alamofire
 
 //MARK: - APIManagerProtocol
 protocol APIManagerProtocol {
-    func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void)
-    func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void)
+    func getFilms(completionHandler: @escaping ([Result]) -> Void) throws
+    func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) throws
 }
 
 //MARK: - APIManager
 final class APIManager: APIManagerProtocol {
     
-    public func getFilms(page: Int, completionHandler: @escaping ([Result]) -> Void) {
-         let urlString = NetworkHelperConstants.moviesListURL + "&page=\(page)"
-         guard let url = URL(string: urlString) else { return }
-         APICaller.shared.performAPICall(url: url, expectingReturnType: MovieResponse.self) { moviesList in
-             var movies = [Result]()
-             for i in 0...moviesList.results.count - 1 {
-                 var movie = moviesList.results[i]
-                 guard let urlString = movie.poster else { return }
-                 guard let url = URL(string: urlString) else { return }
-                 movie.posterImageData = try? Data(contentsOf: url)
-                 movies.append(movie)
-             }
-             completionHandler(movies)
-         }
+    //MARK: - Private properties
     
-    }
+    private let apiKey = "be8ef21a1603bea092f25169f28bce3c"
+    private let baseURL = "https://api.themoviedb.org/"
     
-    public func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) {
+    //MARK: - Public methods
+    
+    public func getFilms(completionHandler: @escaping ([Result]) -> Void) throws {
         
-        let finalURL = NetworkHelperConstants.movieDetailURL + id + "?api_key=\(NetworkHelperConstants.apiKey)"
+        let moviesListURL = baseURL + "3/movie/" + "upcoming" + "?api_key=\(apiKey)"
+        guard let url = URL(string: moviesListURL) else {
+           throw RequestErrors.invalidURLError
+        }
         
-        guard let movieDetailURL = URL(string: finalURL)  else { return }
-        APICaller.shared.performAPICall(url: movieDetailURL, expectingReturnType: MovieDetailsModel.self) { movie in
-            guard let urlString = movie.poster else { return }
-            guard let url = URL(string: urlString) else { return }
-            var modifiedMovie = movie
-            modifiedMovie.posterImageData = try? Data(contentsOf: url)
-            completionHandler(modifiedMovie)
+        var requestDidFail = false
+        AF.request(url).responseDecodable { (response: AFDataResponse<MovieResponse>) in
+            switch response.result {
+            case .success(let moviesList):
+                completionHandler(moviesList.results)
+            case .failure(_):
+                requestDidFail = true
+            }
+        }
+        
+        if requestDidFail {
+            throw RequestErrors.URLRequestFailed
         }
     }
+    
+    public func getFilmById(id: String, completionHandler: @escaping (MovieDetailsModel) -> Void) throws {
+        
+        let movieDetailURL = baseURL + "3/movie/" + id + "?api_key=\(apiKey)"
+
+        guard let movieDetailURL = URL(string: movieDetailURL)  else {
+            throw RequestErrors.invalidURLError
+        }
+        var requestDidFail = false
+        
+        AF.request(movieDetailURL).responseDecodable { (response: AFDataResponse<MovieDetailsModel>) in
+            switch response.result {
+            case .failure(_):
+                requestDidFail = true
+            case .success(let movie):
+                completionHandler(movie)
+            }
+        }
+        
+        if requestDidFail {
+            throw RequestErrors.URLRequestFailed
+        }
+    }
+
 }
