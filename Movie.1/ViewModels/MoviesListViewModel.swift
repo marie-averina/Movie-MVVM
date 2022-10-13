@@ -18,7 +18,6 @@ final class MoviesListViewModel {
             self.updateLoadingStatus?()
         }
     }
-    
     public var numberOfCells: Int {
         return cellModels.count
     }
@@ -51,21 +50,38 @@ final class MoviesListViewModel {
         isLoading = true
         
         do {
-            try self.apiManager.getFilms(page: 1) { [weak self] movies in
+            try self.apiManager.getFilms() { [weak self] movies in
                 self?.isLoading = false
                 self?.processFetchedMovies(movies: movies)
             }
-        } catch RequestErrors.invalidURLError {
-            onErrorHandling?("Invalid url")
-        } catch RequestErrors.URLRequestFailed {
-            onErrorHandling?("Url request failed")
-        } catch {
-            onErrorHandling?("Unnknowned error")
+        } catch let error {
+            if let requestError = error as? RequestErrors {
+                onErrorHandling?(requestError.rawValue)
+            } else {
+                onErrorHandling?("Unknown error")
+            }
         }
     }
     
     public func getCellViewModel(at indexPath: IndexPath) -> MovieCellModel {
         return cellModels[indexPath.row]
+    }
+    
+    private func getImageData(posterPath: String) -> Data {
+        let futureImageData = ImageData(posterPath: posterPath)
+        var imageData = Data()
+        do {
+         try futureImageData.loadImage() { data in
+                imageData = data
+            }
+        } catch let error {
+            if let requestError = error as? RequestErrors {
+                onErrorHandling?(requestError.rawValue)
+            } else {
+                onErrorHandling?("Unknown error")
+            }
+        }
+        return imageData
     }
     
     //MARK: - Private methods
@@ -76,10 +92,12 @@ final class MoviesListViewModel {
         for movie in movies {
             do {
                 try cellModels.append(createCellViewModel(movie: movie))
-            } catch RequestErrors.URLRequestFailed {
-                onErrorHandling?("URL request failed")
-            } catch {
-                onErrorHandling?("Unknown error")
+            } catch let error {
+                if let requestError = error as? RequestErrors {
+                    onErrorHandling?(requestError.rawValue)
+                } else {
+                    onErrorHandling?("Unknown error")
+                }
             }
         }
         self.cellModels = cellModels
@@ -87,13 +105,11 @@ final class MoviesListViewModel {
     
     private func createCellViewModel(movie: Result) throws -> MovieCellModel {
      
-        guard let data = movie.posterImageData else {
-            throw RequestErrors.URLRequestFailed
-        }
+        let imageData = getImageData(posterPath: movie.posterPath)
         return MovieCellModel(titleText: movie.title,
                                   rateText: String(movie.voteAverage),
                                   yearText: movie.releaseDate,
-                                  imageData: data)
+                                  imageData: imageData)
     }
 }
 

@@ -8,10 +8,9 @@
 import Foundation
 
 
-enum RequestErrors: Error {
-    
-    case invalidURLError
-    case URLRequestFailed 
-    
+enum RequestErrors: String, Error {
+    case invalidURLError = "Url request failed"
+    case URLRequestFailed = "Invalid url"
+    case imageFailedToLoad = "Image failed to load"
 }
 
