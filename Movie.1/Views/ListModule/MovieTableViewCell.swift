@@ -18,7 +18,7 @@ final class MovieTableViewCell: UITableViewCell {
     
     //MARK: - Public properties
     
-    public var movieCellViewModel : MovieCellViewModel? {
+    public var movieCellViewModel : MovieCellModel? {
         didSet {
             guard let posterData = movieCellViewModel?.imageData else { return }
             nameLabel.text = movieCellViewModel?.titleText

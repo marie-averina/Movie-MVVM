@@ -15,7 +15,7 @@ final class ListViewController: UIViewController {
    
     //MARK: - Private properties
     
-    private let viewModel: MoviesListViewModel!
+    private let viewModel: MoviesListViewModel
     
     //MARK: - Initialization
     
@@ -41,7 +41,7 @@ final class ListViewController: UIViewController {
     //MARK: - Private methods
     
     private func initViewModel() {
-        viewModel.updateLoadingStatus = { [weak self] () in
+        viewModel.updateLoadingStatus = { [weak self] in
             DispatchQueue.main.async {
                 let isLoading = self?.viewModel.isLoading ?? false
                 if isLoading {
@@ -56,6 +56,10 @@ final class ListViewController: UIViewController {
             DispatchQueue.main.async {
                 self?.movieTableView.reloadData()
             }
+        }
+        
+        viewModel.onErrorHandling = { errorText in
+            self.showAlert(title: "Error", message: errorText)
         }
         
         viewModel.fetchMovieList()
@@ -81,12 +85,8 @@ extension ListViewController: UITableViewDelegate, UITableViewDataSource {
         let movie = viewModel.selectedMovie
         guard let movieId = movie?.id else { return }
         let detailsViewModel = DetailsViewModel()
-        if let detailsViewController = self.storyboard?.instantiateViewController(identifier: "DetailsViewController", creator: { coder -> DetailsViewController? in
-            DetailsViewController(coder: coder, viewModel: detailsViewModel, id: String(movieId))
-        }) {
-            detailsViewController.modalPresentationStyle = .fullScreen
-            navigationController?.pushViewController(detailsViewController, animated: true)
-        }
+        let detailsViewController = DetailsViewController(viewModel: detailsViewModel, movieId: String(movieId))
+        navigationController?.pushViewController(detailsViewController, animated: true)
         
     }
     

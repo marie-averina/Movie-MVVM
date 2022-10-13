@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct MovieCellViewModel {
+struct MovieCellModel {
     let titleText: String
     let rateText: String
     let yearText: String
